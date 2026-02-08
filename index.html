@@ -93,19 +93,19 @@ body {
 
 <script>
 // ========================
-// 1. Live-Uhr (HH:MM)
+// Live-Uhr (HH:MM)
 // ========================
 function updateClock() {
     const now = new Date();
-    const h = String(now.getHours()).padStart(2, "0");
-    const m = String(now.getMinutes()).padStart(2, "0");
+    const h = String(now.getHours()).padStart(2,"0");
+    const m = String(now.getMinutes()).padStart(2,"0");
     document.getElementById("clock").innerText = `${h}:${m}`;
 }
 updateClock();
 setInterval(updateClock, 1000);
 
 // ========================
-// 2. Wetter (alle 5 Minuten)
+// Wetter (alle 5 Minuten)
 // ========================
 async function updateWeather() {
     try {
@@ -123,58 +123,50 @@ updateWeather();
 setInterval(updateWeather, 5*60*1000);
 
 // ========================
-// 3. U-Bahn Abfahrten (alle 10 Sekunden)
+// U-Bahn Abfahrten (alle 10 Sekunden)
 // ========================
+const stopId = "224060200949"; // Oberlaa Richtung Leopoldau
+const proxyUrl = "https://api.allorigins.win/raw?url="; // Proxy
+
 async function updateTimes() {
-    const stopId = "224060200949"; // Oberlaa Richtung Leopoldau
     try {
         const url = `https://www.wienerlinien.at/ogd_realtime/monitor?rbl=${stopId}`;
-        const res = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
+        const res = await fetch(proxyUrl + encodeURIComponent(url));
         const data = await res.json();
 
-        const monitors = data.data?.monitors;
+        const monitors = data?.data?.monitors;
         if (!monitors || monitors.length === 0) return;
 
-        const lines = monitors[0].lines;
-        const u1 = lines.find(l => l.name === "U1");
-        if (!u1) return;
+        let departures = [];
+        monitors.forEach(monitor => {
+            monitor.lines.forEach(line => {
+                if (line.name === "U1") {
+                    departures.push(...line.departures.departure);
+                }
+            });
+        });
 
-        const deps = u1.departures.departure;
+        // Sortieren nach geplanter Zeit
+        departures.sort((a,b) => new Date(a.departureTime.timePlanned) - new Date(b.departureTime.timePlanned));
 
         for (let i = 0; i < 4; i++) {
-            const dep = deps[i];
             const el = document.getElementById("t" + (i+1));
-
+            const dep = departures[i];
             if (!dep) {
                 el.innerText = "--:--";
                 continue;
             }
-
-            const planned = dep.departureTime?.timePlanned;
-            if (!planned) {
-                el.innerText = "--:--";
-                continue;
-            }
-
-            const d = new Date(planned);
-            if (isNaN(d)) {
-                el.innerText = "--:--";
-            } else {
-                const h = String(d.getHours()).padStart(2,"0");
-                const m = String(d.getMinutes()).padStart(2,"0");
-                el.innerText = `${h}:${m}`;
-            }
+            const d = new Date(dep.departureTime.timePlanned);
+            el.innerText = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
         }
 
     } catch(e) {
-        console.log("Abfahrten Fehler:", e);
-        for (let i = 1; i <= 4; i++) {
-            document.getElementById("t" + i).innerText = "--:--";
-        }
+        console.log("Fehler bei Abfahrten:", e);
+        for (let i=1;i<=4;i++) document.getElementById("t"+i).innerText="--:--";
     }
 }
 updateTimes();
-setInterval(updateTimes, 10*1000);
+setInterval(updateTimes, 10000);
 </script>
 </body>
 </html>
