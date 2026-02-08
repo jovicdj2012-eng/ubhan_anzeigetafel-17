@@ -16,23 +16,22 @@ async function updateTimes() {
 
         for (let i = 0; i < 4; i++) {
             const dep = deps[i];
-            const el = document.getElementById("t" + (i+1));
+            const el = document.getElementById("t" + (i + 1));
 
             if (!dep) {
                 el.innerText = "--:--";
                 continue;
             }
 
-            // Nutze zuerst timeReal, sonst timePlanned
-            let timeStr = dep.departureTime?.timeReal || dep.departureTime?.timePlanned;
-
-            if (!timeStr) {
+            // **timePlanned verwenden**, timeReal ignorieren
+            const timePlanned = dep.departureTime?.timePlanned;
+            if (!timePlanned) {
                 el.innerText = "--:--";
                 continue;
             }
 
             // ISO-Zeit parsen
-            const d = new Date(timeStr);
+            const d = new Date(timePlanned);
             if (isNaN(d)) {
                 el.innerText = "--:--";
             } else {
@@ -44,11 +43,8 @@ async function updateTimes() {
 
     } catch(e) {
         console.log("Abfahrten Fehler:", e);
-        // Optional: alle Zeiten auf --:--
         for (let i = 1; i <= 4; i++) {
             document.getElementById("t" + i).innerText = "--:--";
         }
     }
 }
-
-            
